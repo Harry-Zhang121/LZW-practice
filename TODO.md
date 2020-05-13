@@ -1,0 +1,3 @@
+- Setup gitignore
+- infinate long dictionary
+- binary output

@@ -30,6 +30,8 @@ class LZW
 
     void p_test();
     void compress(std::ifstream &instream, std::ofstream &outstream);
-    void decompress(char *inpath, char *outpath);
+
+    void char_out(int symbol, std::ofstream &outstream, int *letter);
+    void decompress(std::ifstream &instream, std::ofstream &outstream);
 
 };

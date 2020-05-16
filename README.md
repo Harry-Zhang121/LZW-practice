@@ -14,7 +14,7 @@ Aviliable command line arguments
 | -i        | specify the input file path |
 | -c        | compress the file           |
 | -d        | decompress the file         |
-The output file will be saved to the path will the program located in.
+The output file will be saved to the same path as input file.
 
 
 ## code

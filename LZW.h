@@ -2,8 +2,9 @@
 #include <vector>
 #include <fstream>
 #include <string>
-#include "IAlgorithm.h"
+#include <unistd.h>
 
+//Structure of the Dictionary.
 class Node
 {
     public:
@@ -13,30 +14,42 @@ class Node
     
 };
 
-class LZW : public IAlgorithm
+//Base class, contain file streams and dictionary.
+class LZW
 {
-    std::vector<Node> Dictionary;
-    int ct;
-    int p;
+    protected:
+    std::ifstream in_stream;
+    std::ofstream out_stream;
 
+    std::vector<Node> Dictionary;
+    int counter;
+    int previous_char;
 
     public:
-    
-    LZW();      //Initialize the dictionary
-    LZW(std::string path);
-
+    LZW();
     ~LZW();
 
-    virtual void file_to_open(std::string path, bool open_mode);
-    
-    // void compress(std::ifstream &in_stream, std::ofstream &out_stream);
+};
 
-    // void char_out(int symbol, std::ofstream &out_stream, int *letter);
-    // void decompress(std::ifstream &in_stream, std::ofstream &out_stream);
+// Compress class inhareted from LZW base class.
+class Compress : public LZW
+{
+    public:
+    //This constructor will open the output file determind by the name of the input file as a binary file.
+    Compress(std::string path);
 
-    void compress();
+    void run_compress();
+
+};
+
+// Decompress class inhareted from LZW base class.
+class Decompress : public LZW
+{
+    public:
+    //This constructor will open the input file determind by the name of the output file as a binary file.
+    Decompress(std::string path);
+
 
     void char_out(int symbol, int *letter);
-    void decompress();
-
+    void run_decompress();
 };

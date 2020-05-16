@@ -1,72 +1,23 @@
 #include "LZW.h"
-#include "compress_exception.h"
 #include <vector>
 #include <fstream>
 #include <string>
 
 
-
-
-
-LZW::LZW(std::string path)
+// Constructor of bass class to initialize dictionary:
+LZW::LZW()
 {
-    //----------------------------------Open files and setup in/out streams:
-
-    if(!file_open_mode)
-    //open_mode 0: prepare file stream for compress.
-    //opem_mode 1: prepare file stream for decompress.
-    {
-        
-        in_stream.open(path, std::ios::in);
-
-        try
-        {
-            std::size_t filename_length = path.rfind('.');
-            path.replace(filename_length, path.length()-filename_length, ".lzw");
-
-        }
-        // If we can not find '.' rfind will throw a std::out_of_range error.
-        // '.'    >.<    *.*    ^.^    '."
-        catch(std::out_of_range)
-        {
-            std::cerr << "Please provide a file with Filename extension" << '\n';
-        }
-       
-        out_stream.open(path, std::ios::out | std::ios::binary);
-    }
-    else
-    {
-        in_stream.open(path, std::ios::in | std::ios::binary);
-
-        try
-        {
-            std::size_t filename_length = path.rfind(".lzw");
-            path.replace(filename_length, 4, ".txt");
-        }
-        catch(std::out_of_range)
-        {
-            std::cerr << "Please provide a file with the extension '.lzw'." << '\n';
-        }
-
-        
-        out_stream.open(path, std::ios::out);
-    }
-
-
-    // --------------------------------------------Initialize dictionary:
-
     for(int i=0; i<=255; i++)
     {
         Dictionary.push_back(Node(-1, i));
     }
-    ct = 256;
-    // Initialy p is -1.
-    p = -1;
-    
+    counter = 256;
+    // Initialy there is no privous char so previous_char = -1.
+    previous_char = -1;
     
 }
 
-// Destructor, clear the dictionary and close all files.
+// Destructor of bass class to clear the dictionary and close all files.
 LZW::~LZW()
 {
     Dictionary.clear();
@@ -75,85 +26,124 @@ LZW::~LZW()
     out_stream.close();
 }
 
-void LZW::compress()
+Compress::Compress(std::string path)
 {
-    // If compress function is called but file_open_mode is not set for compress, Throw an error.
-    try{if(!file_open_mode) throw open_mode_error();}
-    catch(std::exception &error)
-    { std::cerr << error.what() << std::endl;}
+    //----------------------------------Open files and setup in/out streams:
+    in_stream.open(path, std::ios::in);
+
+    try//This block takes the filename and open the filename.lzw
+    {
+        std::size_t filename_length = path.rfind('.');
+        path.replace(filename_length, path.length()-filename_length, ".lzw");
+    }
+    // If we can not find '.' rfind will throw a std::out_of_range error.
+    // '.'    >.<    *.*    ^.^    '."
+    catch(std::out_of_range)
+    {
+        std::cerr << "Please provide a file with Filename extension" << std::endl;
+        exit(1);
+    }
+    
+    out_stream.open(path, std::ios::out | std::ios::binary);
+
+}
+
+Decompress::Decompress(std::string path)
+{
+    in_stream.open(path, std::ios::in | std::ios::binary);
+
+    try//This block takes the filename and open the filename.txt
+    {
+        std::size_t filename_length = path.rfind(".lzw");
+        path.replace(filename_length, 4, ".txt");
+    }
+    // If we can not find '.lzw' rfind will throw a std::out_of_range error.
+    catch(std::out_of_range)
+    {
+        std::cerr << "Please provide a file with the extension '.lzw'." << std::endl;
+        exit(1);
+    }
+
+    
+    out_stream.open(path, std::ios::out);
+}
 
 
-    char word;
+
+void Compress::run_compress()
+{
+    char current_char;
 
     while(! in_stream.eof())
     {
         // Read one character from the input file.
-        in_stream.get(word);
+        in_stream.get(current_char);
         
         // A little switcher to replace If-else statements.
         // Beasuce the if statement is in the for loop.
         bool sw = 0;
         // run the loop to check if the character is in the Dicttionary.
-        for(int i=0; i<ct; i++)
+        for(int i=0; i<counter; i++)
         {
             // If in the Dicttionary, p = the index of Dicttionary.
-            if(Dictionary[i].previous == p && Dictionary[i].current == (int)word)
+            if(Dictionary[i].previous == previous_char && Dictionary[i].current == (int)current_char)
             {
-                p = i;
+                previous_char = i;
                 sw = 1;
             }
         }
 
         
 
-        // If not in the Dicttionary, create a new Dicttionary element for the word.
+        // If not in the Dicttionary, create a new Dictionary element for the current_char.
         if(!sw)
         {
-            Dictionary.push_back(Node(p,word));
+            Dictionary.push_back(Node(previous_char,current_char));
             
-            //Write the index number to the binary file.
-            out_stream.write((char*)&p, sizeof(int));
-            p = (int)word;
-            ct++;
+            //Write the last char to the binary file.
+            out_stream.write((char*)&previous_char, sizeof(int));
+            previous_char = (int)current_char;
+            counter++;
       }
     } 
 }
 
 // Separate the function for recursion.
-void LZW::char_out(int symbol, int *letter)
+void Decompress::char_out(int current_symbol, int *letter)
 {
-    if(Dictionary[symbol].previous != -1)
+    if(Dictionary[current_symbol].previous != -1)
     {
-        char_out(Dictionary[symbol].previous, letter);
+        char_out(Dictionary[current_symbol].previous, letter);
     }
 
     else
     {
-        //return the first char of the word for creating the new dictionary element.
-        *letter = Dictionary[symbol].current;
+        //return the first char of the current_char for creating the new dictionary element.
+        *letter = Dictionary[current_symbol].current;
     }
     
-    out_stream.put((char)Dictionary[symbol].current);
+    out_stream.put((char)Dictionary[current_symbol].current);
 }
 
 // Main decompress function.
-void LZW::decompress()
+void Decompress::run_decompress()
 {
-    int symbol;
+    int current_symbol;
 
-    while(! in_stream.eof())
+    while(!in_stream.eof())
     {
-        in_stream.read((char*)&symbol, sizeof(int));
+        // Read one char from binary file and convert it into ascii.
+        in_stream.read((char*)&current_symbol, sizeof(int));
         int first_letter;
-        // Call the charout function to output the comolete word.
-        char_out(symbol, &first_letter);
+        // Call the charout function to output the complete word.
+        char_out(current_symbol, &first_letter);
 
 
-        if(p != -1)
+        if(previous_char != -1)
         {
-            Dictionary.push_back(Node(p,first_letter));
-            ct++;
+            Dictionary.push_back(Node(previous_char,first_letter));
+            counter++;
         }
-        p = symbol;
+        previous_char = current_symbol;
     }
 }

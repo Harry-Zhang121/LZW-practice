@@ -1,6 +1,8 @@
-#include<iostream>
-#include<vector>
-#include<fstream>
+#include <iostream>
+#include <vector>
+#include <fstream>
+#include <string>
+#include "IAlgorithm.h"
 
 class Node
 {
@@ -9,29 +11,32 @@ class Node
         int current;
         Node(int prev, int curr): previous(prev), current(curr) {};
     
-    // static node make_node(int pre, int cur)
-    // {
-    //     class node temp;
-    //     temp.previous = pre;
-    //     temp.current = cur;
-    //     return temp;
-    // }
 };
 
-class LZW
+class LZW : public IAlgorithm
 {
-    std::vector<Node> Dict;
+    std::vector<Node> Dictionary;
     int ct;
     int p;
 
+
     public:
+    
     LZW();      //Initialize the dictionary
+    LZW(std::string path);
+
     ~LZW();
 
-    void p_test();
-    void compress(std::ifstream &instream, std::ofstream &outstream);
+    virtual void file_to_open(std::string path, bool open_mode);
+    
+    // void compress(std::ifstream &in_stream, std::ofstream &out_stream);
 
-    void char_out(int symbol, std::ofstream &outstream, int *letter);
-    void decompress(std::ifstream &instream, std::ofstream &outstream);
+    // void char_out(int symbol, std::ofstream &out_stream, int *letter);
+    // void decompress(std::ifstream &in_stream, std::ofstream &out_stream);
+
+    void compress();
+
+    void char_out(int symbol, int *letter);
+    void decompress();
 
 };

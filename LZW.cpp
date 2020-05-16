@@ -1,35 +1,94 @@
-#include"LZW.h"
-#include<vector>
-#include<fstream>
+#include "LZW.h"
+#include "compress_exception.h"
+#include <vector>
+#include <fstream>
+#include <string>
 
-LZW::LZW()
+
+
+
+
+LZW::LZW(std::string path)
 {
-    // std::vector<Node> Dict(0);
+    //----------------------------------Open files and setup in/out streams:
+
+    if(!file_open_mode)
+    //open_mode 0: prepare file stream for compress.
+    //opem_mode 1: prepare file stream for decompress.
+    {
+        
+        in_stream.open(path, std::ios::in);
+
+        try
+        {
+            std::size_t filename_length = path.rfind('.');
+            path.replace(filename_length, path.length()-filename_length, ".lzw");
+
+        }
+        // If we can not find '.' rfind will throw a std::out_of_range error.
+        // '.'    >.<    *.*    ^.^    '."
+        catch(std::out_of_range)
+        {
+            std::cerr << "Please provide a file with Filename extension" << '\n';
+        }
+       
+        out_stream.open(path, std::ios::out | std::ios::binary);
+    }
+    else
+    {
+        in_stream.open(path, std::ios::in | std::ios::binary);
+
+        try
+        {
+            std::size_t filename_length = path.rfind(".lzw");
+            path.replace(filename_length, 4, ".txt");
+        }
+        catch(std::out_of_range)
+        {
+            std::cerr << "Please provide a file with the extension '.lzw'." << '\n';
+        }
+
+        
+        out_stream.open(path, std::ios::out);
+    }
+
+
+    // --------------------------------------------Initialize dictionary:
+
     for(int i=0; i<=255; i++)
     {
-        Dict.push_back(Node(-1, i));
-        // Dict[i] = node{1, i};
-        //Dict[i].previous = -1;
-        //Dict[i].current = i;
+        Dictionary.push_back(Node(-1, i));
     }
     ct = 256;
     // Initialy p is -1.
     p = -1;
+    
+    
 }
+
+// Destructor, clear the dictionary and close all files.
 LZW::~LZW()
 {
-    Dict.clear();
+    Dictionary.clear();
+    
+    in_stream.close();
+    out_stream.close();
 }
 
-void LZW::compress(std::ifstream &instream, std::ofstream &outstream)
+void LZW::compress()
 {
+    // If compress function is called but file_open_mode is not set for compress, Throw an error.
+    try{if(!file_open_mode) throw open_mode_error();}
+    catch(std::exception &error)
+    { std::cerr << error.what() << std::endl;}
+
+
     char word;
 
-    while(! instream.eof())
+    while(! in_stream.eof())
     {
         // Read one character from the input file.
-        instream.get(word);
-        std::cout << word;
+        in_stream.get(word);
         
         // A little switcher to replace If-else statements.
         // Beasuce the if statement is in the for loop.
@@ -38,7 +97,7 @@ void LZW::compress(std::ifstream &instream, std::ofstream &outstream)
         for(int i=0; i<ct; i++)
         {
             // If in the Dicttionary, p = the index of Dicttionary.
-            if(Dict[i].previous == p && Dict[i].current == (int)word)
+            if(Dictionary[i].previous == p && Dictionary[i].current == (int)word)
             {
                 p = i;
                 sw = 1;
@@ -50,56 +109,49 @@ void LZW::compress(std::ifstream &instream, std::ofstream &outstream)
         // If not in the Dicttionary, create a new Dicttionary element for the word.
         if(!sw)
         {
-            Dict.push_back(Node(p,word));
-            // Dict[ct].previous = p;
-            // Dict[ct].current = word;
-
-            //output p in 4 digits hex format. 2^16 = 16^4 = 65536
-            outstream.write((char*)&p, sizeof(int));
-            //fprintf(fpout, "%04X", p);
+            Dictionary.push_back(Node(p,word));
+            
+            //Write the index number to the binary file.
+            out_stream.write((char*)&p, sizeof(int));
             p = (int)word;
             ct++;
       }
-    }
-    std::cout << std::endl;
-    // We don't need to include the Dicttionary to the file.
-   
+    } 
 }
 
 // Separate the function for recursion.
-void LZW::char_out(int symbol, std::ofstream &outstream, int *letter)
+void LZW::char_out(int symbol, int *letter)
 {
-    if(Dict[symbol].previous != -1)
+    if(Dictionary[symbol].previous != -1)
     {
-        char_out(Dict[symbol].previous, outstream, letter);
+        char_out(Dictionary[symbol].previous, letter);
     }
 
     else
     {
         //return the first char of the word for creating the new dictionary element.
-        *letter = Dict[symbol].current;
+        *letter = Dictionary[symbol].current;
     }
-
-    // outstream << (char)Dict[symbol].current;
-    outstream.put((char)Dict[symbol].current);
+    
+    out_stream.put((char)Dictionary[symbol].current);
 }
 
 // Main decompress function.
-void LZW::decompress(std::ifstream &instream, std::ofstream &outstream)
+void LZW::decompress()
 {
     int symbol;
 
-    while(! instream.eof())
+    while(! in_stream.eof())
     {
-        instream.read((char*)&symbol, sizeof(int));
+        in_stream.read((char*)&symbol, sizeof(int));
         int first_letter;
         // Call the charout function to output the comolete word.
-        char_out(symbol, outstream, &first_letter);
+        char_out(symbol, &first_letter);
 
 
         if(p != -1)
         {
-            Dict.push_back(Node(p,first_letter));
+            Dictionary.push_back(Node(p,first_letter));
             ct++;
         }
         p = symbol;

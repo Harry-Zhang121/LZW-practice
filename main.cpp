@@ -1,54 +1,55 @@
 #include<iostream>
 #include<fstream>
+#include<getopt.h>
 #include"LZW.h"
 
 using namespace std;
 
-void print_file(std::ifstream &instream)
+int main(int argc, char *argv[])
 {
-    char word;
-    while (!instream.eof())
+    // if(argc < 2)
+    //     die("Not enough arguments, please type \"./LZW -h \" for help.");
+
+    int cmd;
+    char *inpath;
+    char *outpath;
+
+    // Use getopt function to process command line arguments.
+    while((cmd = getopt(argc, argv, "hi:o:cd")) != -1)
     {
-        instream >> word;
-        std::cout << "Now reading:" << word;
+        switch(cmd)
+        {
+            case 'i':
+                printf("input file:%s\n", optarg);
+                inpath = optarg;
+                break;
+
+            case 'o':
+                printf("output file:%s\n", optarg);
+                outpath = optarg;
+                break;
+
+            case 'c':
+                printf("compressing\n");
+                LZW task1;
+                task1.file_to_open(inpath);
+                task1.compress();
+                printf("success\n");
+                break;
+
+            case 'd':
+                printf("decompressing\n");
+                decompress(inpath, outpath);
+                printf("success\n");
+                break;
+
+            case '?':
+                die("arguments error, please type \"./LZW -h \" for help. ");
+                break;
+
+            case 'h':
+                printf("Welcome to LZW.\nUsage: ./LZW -i [input_file] -o [output_file] [options] ");
+                break;
+        }
     }
-    
-}
-
-void comp()
-{
-    ifstream ins;
-    ins.open("test.txt", ios::in);
-
-    ofstream outs;
-    outs.open("test_out_comp.lzw", ios::out | ios::binary);
-
-    class LZW task1;
-    // print_file(ins);
-    //task1.p_test();
-    task1.compress(ins, outs);
-    
-
-}
-
-void decomp()
-{
-    ifstream ins;
-    ins.open("test_out_comp.lzw", ios::in | ios::binary);
-
-    ofstream outs;
-    outs.open("test_out.txt", ios::out);
-
-    class LZW task2;
-    task2.decompress(ins, outs);
-}
-
-int main()
-{
-    int chooes;
-    cin >> chooes;
-    if(chooes == 1)
-    comp();
-    else
-    decomp();
 }
